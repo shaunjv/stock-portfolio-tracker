@@ -1,0 +1,77 @@
+<!--
+  manifest-entries.xml
+  ════════════════════════════════════════════════════════════════
+  Add these entries to your AndroidManifest.xml.
+  This is NOT a standalone manifest — merge into your existing one.
+  ════════════════════════════════════════════════════════════════
+-->
+
+<!-- ═══ PERMISSIONS ═══════════════════════════════════════════ -->
+
+<!-- Required: Network access for API calls -->
+<uses-permission android:name="android.permission.INTERNET" />
+
+<!-- Required: Foreground service (API 28+) -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+<!-- Required: Foreground service type (API 34+) -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+<!-- Required: Show notifications on Android 13+ (API 33+) -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+<!-- Required: Write to Documents on API 26-28 -->
+<uses-permission
+    android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    android:maxSdkVersion="28" />
+
+<!-- Required: Read storage for MediaStore queries on API 28-32 -->
+<uses-permission
+    android:name="android.permission.READ_EXTERNAL_STORAGE"
+    android:maxSdkVersion="32" />
+
+<!-- Optional: Exact alarms for precise scheduling (API 31+) -->
+<!-- Only needed if you use AlarmManager for DailySummaryWorker -->
+<!-- <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" /> -->
+
+
+<!-- ═══ APPLICATION ENTRIES ═══════════════════════════════════ -->
+<!-- Add these inside the <application> tag -->
+
+<!-- Price Polling Foreground Service -->
+<service
+    android:name="com.shaun.stocktracker.service.PricePollingService"
+    android:enabled="true"
+    android:exported="false"
+    android:foregroundServiceType="dataSync" />
+
+<!--
+  NOTE on android:foregroundServiceType="dataSync":
+  - Required on API 34+ (Android 14)
+  - On API 26-33, this attribute is optional but harmless
+  - "dataSync" is appropriate for periodic data fetching from an API
+-->
+
+
+<!-- ═══ RUNTIME PERMISSIONS TO REQUEST IN CODE ════════════════
+
+  On Android 13+ (API 33), you MUST request POST_NOTIFICATIONS
+  at runtime before showing any notification. Example:
+
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      requestPermissions(
+          arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+          REQUEST_NOTIFICATION_PERMISSION
+      )
+  }
+
+  On API 26-28, you MUST request WRITE_EXTERNAL_STORAGE at runtime:
+
+  if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+      requestPermissions(
+          arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+          REQUEST_STORAGE_PERMISSION
+      )
+  }
+
+═══════════════════════════════════════════════════════════════ -->
