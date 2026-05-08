@@ -28,51 +28,31 @@ if not logger.handlers:
 _global_client = None
 
 
-def _get_client() -> SmartConnect:
+def get_shared_client() -> SmartConnect:
     """
-    Create or reuse a SmartConnect client instance.
-    Sets all required tokens if an active session exists.
+    Returns the SINGLE global SmartConnect instance.
+    Initializes it exactly once. Does NOT re-apply tokens.
     """
     global _global_client
     
-    current_session = get_session()
-    client_code = os.getenv("ANGEL_CLIENT_CODE", "")
-    
     if _global_client is not None:
-        logger.info("Reusing existing SmartConnect instance.")
-        if current_session.is_active():
-            _global_client.setAccessToken(current_session.jwt_token)
-            _global_client.setRefreshToken(current_session.refresh_token)
-            if hasattr(_global_client, 'setFeedToken'):
-                _global_client.setFeedToken(current_session.feed_token)
-            else:
-                _global_client.feedToken = current_session.feed_token
-            _global_client.setUserId(client_code)
+        logger.debug(f"Reusing existing SmartConnect instance [id={id(_global_client)}]")
         return _global_client
 
     api_key = os.getenv("ANGEL_API_KEY", "")
     if not api_key:
         raise ValueError("ANGEL_API_KEY environment variable is not set")
 
-    logger.info("Creating new SmartConnect instance.")
+    logger.info(f"Initializing NEW shared SmartConnect instance.")
     _global_client = SmartConnect(api_key=api_key)
-
-    if current_session.is_active():
-        logger.info("Applying stored tokens to new SmartConnect instance.")
-        _global_client.setAccessToken(current_session.jwt_token)
-        _global_client.setRefreshToken(current_session.refresh_token)
-        if hasattr(_global_client, 'setFeedToken'):
-            _global_client.setFeedToken(current_session.feed_token)
-        else:
-            _global_client.feedToken = current_session.feed_token
-        _global_client.setUserId(client_code)
+    logger.debug(f"New SmartConnect instance created [id={id(_global_client)}]")
 
     return _global_client
 
 
 def _refresh_session() -> bool:
     """Attempt to refresh the session using the refresh token."""
-    client = _get_client()
+    client = get_shared_client()
     current_session = get_session()
     
     if not current_session.refresh_token:
@@ -90,6 +70,7 @@ def _refresh_session() -> bool:
             
             if jwt_token and refresh_token:
                 save_session(jwt_token, refresh_token, feed_token)
+                # Apply the newly refreshed tokens to the shared instance
                 client.setAccessToken(jwt_token)
                 client.setRefreshToken(refresh_token)
                 logger.info("Token refreshed successfully.")
@@ -106,10 +87,11 @@ def login() -> dict:
     Authenticate with Angel One using environment variables.
 
     Steps:
-      1. Create a SmartConnect client with the API key.
+      1. Get the shared SmartConnect client.
       2. Generate a TOTP code from the stored secret.
       3. Call generateSession with client code, password, and TOTP.
-      4. Store the returned tokens in the in-memory session.
+      4. Call getProfile if required.
+      5. Store the returned tokens in the in-memory session.
 
     Returns:
         dict with keys: success (bool), message (str)
@@ -122,10 +104,10 @@ def login() -> dict:
     if not password:
         raise ValueError("ANGEL_PASSWORD environment variable is not set")
 
-    client = _get_client()
+    client = get_shared_client()
     totp = generate_totp()
 
-    logger.info("Calling SmartAPI generateSession...")
+    logger.info(f"Calling SmartAPI generateSession on client [id={id(client)}]...")
     try:
         data = client.generateSession(client_code, password, totp)
     except Exception as e:
@@ -137,12 +119,26 @@ def login() -> dict:
         logger.error(f"Login failed: {error_msg}")
         return {"success": False, "message": f"Login failed: {error_msg}"}
 
-    logger.info("Login successful. Storing tokens.")
-    # Extract tokens from the successful response
+    logger.info("generateSession successful. Extracting tokens.")
     session_data = data["data"]
+    refresh_token = session_data["refreshToken"]
+    jwt_token = session_data["jwtToken"]
+    
+    # Call getProfile to complete the session lifecycle if required
+    try:
+        logger.info("Calling getProfile(refreshToken) to validate session lifecycle...")
+        profile_res = client.getProfile(refresh_token)
+        if profile_res and profile_res.get("status"):
+            logger.info("getProfile successful.")
+        else:
+            logger.warning(f"getProfile returned non-success: {profile_res}")
+    except Exception as e:
+        logger.error(f"Error fetching profile during login: {e}")
+
+    logger.info("Storing tokens in auth session state.")
     save_session(
-        jwt_token=session_data["jwtToken"],
-        refresh_token=session_data["refreshToken"],
+        jwt_token=jwt_token,
+        refresh_token=refresh_token,
         feed_token=session_data.get("feedToken", ""),
     )
 
@@ -168,10 +164,12 @@ def get_holdings() -> dict:
             "holdings": [],
         }
 
-    client = _get_client()
+    client = get_shared_client()
 
     try:
-        logger.info("Fetching holdings from SmartAPI...")
+        logger.info(f"Fetching holdings using SmartConnect instance [id={id(client)}]...")
+        has_token = bool(client.access_token)
+        logger.debug(f"Client access token present: {has_token}")
         response = client.holding()
     except Exception as e:
         logger.error(f"Error fetching holdings: {e}")
