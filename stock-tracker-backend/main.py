@@ -85,11 +85,11 @@ async def api_status():
     """
     session = get_session()
     if session.is_active():
-        return {"logged_in": True, "message": "Session is active"}
+        return {"logged_in": True, "token_valid": True, "message": "Session is active"}
     elif session.jwt_token:
-        return {"logged_in": False, "message": "Session has expired. Please login again."}
+        return {"logged_in": True, "token_valid": False, "message": "Session has expired. Please login again."}
     else:
-        return {"logged_in": False, "message": "Not logged in. Please call /api/login."}
+        return {"logged_in": False, "token_valid": False, "message": "Not logged in. Please call /api/login."}
 
 
 @app.get("/api/portfolio")
