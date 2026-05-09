@@ -1,9 +1,15 @@
 package com.shaun.stocktracker.ui.detail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,33 +18,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.shaun.stocktracker.network.YahooFinanceService
 import com.shaun.stocktracker.network.model.Holding
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StockDetailScreen(
     holding: Holding?,
     viewModel: StockDetailViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToFullChart: (String) -> Unit
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
 
+    // Colors matching the screenshot theme
+    val bgColor = Color(0xFF181A20)
+    val textColor = Color(0xFFE2E8F0)
+    val textSecondary = Color(0xFF94A3B8)
+    val borderColor = Color(0xFF2B3139)
+    val redColor = Color(0xFFF6465D)
+    val greenColor = Color(0xFF0ECB81)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(holding?.symbol?.removeSuffix("-EQ") ?: "Detail") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
+        containerColor = bgColor,
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showBottomSheet = true },
                 icon = { Icon(Icons.Default.Notifications, contentDescription = "Alerts") },
-                text = { Text("Set / Edit Alert") }
+                text = { Text("Set / Edit Alert") },
+                containerColor = Color(0xFF2B3139),
+                contentColor = textColor
             )
         }
     ) { paddingValues ->
@@ -46,120 +62,172 @@ fun StockDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .background(bgColor)
         ) {
             if (holding == null) {
                 Text(
                     text = "Stock not found.",
+                    color = textColor,
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
                 ) {
-                    val pnlColor = if (holding.pnl >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
-                    val pnlSign = if (holding.pnl >= 0) "+" else ""
-
-                    // Header: Symbol and Exchange
+                    val pnlColor = if (holding.pnl >= 0) greenColor else redColor
+                    val isOverallProfit = holding.pnl >= 0
+                    
+                    // Top Bar Custom Row
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = onNavigateBack, modifier = Modifier.size(28.dp).padding(end = 8.dp)) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = textSecondary)
+                            }
+                            Column {
+                                Text(
+                                    text = holding.symbol.removeSuffix("-EQ"),
+                                    color = textColor,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${holding.symbol.removeSuffix("-EQ")} Limited • ${holding.exchange}",
+                                    color = textSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "₹%.2f".format(holding.ltp),
+                                    color = pnlColor, // Use overall PnL color for price
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = if (holding.pnl >= 0) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = pnlColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            // Hardcoded day change as placeholder since not in Holding
+                            Text(
+                                text = "-0.00 (-0.00%)",
+                                color = textSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    // Chart Section (Outlined Card)
+                    Box(modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .clickable { onNavigateToFullChart(holding.symbol) }
+                    ) {
+                        StockChartSection(holding = holding, borderColor = borderColor, textColor = textColor, textSecondary = textSecondary)
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Overall Loss/Profit
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isOverallProfit) "Overall Profit" else "Overall Loss",
+                                color = textSecondary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = "Visibility",
+                                tint = textSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        val pnlSign = if (holding.pnl >= 0) "" else "-"
                         Text(
-                            text = holding.symbol.removeSuffix("-EQ"),
-                            style = MaterialTheme.typography.headlineLarge,
+                            text = "$pnlSign₹%.2f (%.2f%%)".format(abs(holding.pnl), holding.pnlPercentage),
+                            color = pnlColor,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Text(
-                                text = holding.exchange,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // LTP
-                    Text(
-                        text = "₹%.2f".format(holding.ltp),
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // Stats Grid
+                    val invested = holding.quantity * holding.avgPrice
+                    val currentValue = holding.quantity * holding.ltp
 
-                    // P&L
-                    Text(
-                        text = "$pnlSign₹%.2f (${pnlSign}%.2f%%)".format(holding.pnl, holding.pnlPercentage),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = pnlColor,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Position Card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Your Position",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 16.dp)
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            StatItem(
+                                label = "Total Quantity",
+                                value = "${holding.quantity}",
+                                textSecondary = textSecondary,
+                                textColor = textColor,
+                                modifier = Modifier.weight(1f)
                             )
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text("Quantity", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("${holding.quantity}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("Avg. Price", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("₹%.2f".format(holding.avgPrice), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                val invested = holding.quantity * holding.avgPrice
-                                val currentValue = holding.quantity * holding.ltp
-                                
-                                Column {
-                                    Text("Invested Value", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("₹%.2f".format(invested), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("Current Value", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("₹%.2f".format(currentValue), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
+                            StatItem(
+                                label = "Avg Traded Price",
+                                value = "₹%.2f".format(holding.avgPrice),
+                                textSecondary = textSecondary,
+                                textColor = textColor,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            StatItem(
+                                label = "Invested",
+                                value = "₹%.0f".format(invested),
+                                textSecondary = textSecondary,
+                                textColor = textColor,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatItem(
+                                label = "Market Value",
+                                value = "₹%.0f".format(currentValue),
+                                textSecondary = textSecondary,
+                                textColor = textColor,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            StatItem(
+                                label = "Today's Loss",
+                                value = "-₹0.00 (-0.00%)",
+                                textSecondary = textSecondary,
+                                textColor = textColor,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatItem(
+                                label = "Today's Realized Gain",
+                                value = "₹0.00",
+                                textSecondary = textSecondary,
+                                textColor = textColor,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    // Chart Section
-                    StockChartSection(holding = holding)
                 }
             }
         }
@@ -175,25 +243,32 @@ fun StockDetailScreen(
 }
 
 @Composable
-fun StockChartSection(holding: com.shaun.stocktracker.network.model.Holding) {
-    var chartData by remember { mutableStateOf<List<com.github.mikephil.charting.data.Entry>?>(null) }
+fun StatItem(label: String, value: String, textSecondary: Color, textColor: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(text = label, color = textSecondary, fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = value, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+fun StockChartSection(holding: Holding, borderColor: Color, textColor: Color, textSecondary: Color) {
+    var chartData by remember { mutableStateOf<List<Entry>?>(null) }
     var isLoadingChart by remember { mutableStateOf(true) }
     var chartError by remember { mutableStateOf<String?>(null) }
-    var selectedRange by remember { mutableStateOf("1D") }
+    var selectedRange by remember { mutableStateOf("1W") }
     
-    val yahooService = remember { com.shaun.stocktracker.network.YahooFinanceService.create() }
+    val yahooService = remember { YahooFinanceService.create() }
 
     LaunchedEffect(holding.symbol, selectedRange) {
         val symbol = holding.symbol.removeSuffix("-EQ") + ".NS"
         val (interval, range) = when(selectedRange) {
-            "1H" -> "5m" to "1d"
-            "3H" -> "15m" to "1d"
-            "1D" -> "30m" to "1d"
-            "1W" -> "1d" to "5d"
+            "1D" -> "5m" to "1d"
+            "1W" -> "15m" to "5d"
             "1M" -> "1d" to "1mo"
-            "3M" -> "1d" to "3mo"
             "1Y" -> "1wk" to "1y"
-            else -> "30m" to "1d"
+            "3Y" -> "1mo" to "3y"
+            else -> "1d" to "1mo"
         }
 
         isLoadingChart = true
@@ -205,11 +280,11 @@ fun StockChartSection(holding: com.shaun.stocktracker.network.model.Holding) {
             val closes = result?.indicators?.quote?.firstOrNull()?.close
             
             if (timestamps != null && closes != null && timestamps.size == closes.size) {
-                val entries = mutableListOf<com.github.mikephil.charting.data.Entry>()
+                val entries = mutableListOf<Entry>()
                 for (i in timestamps.indices) {
                     val closeVal = closes[i]
                     if (closeVal != null) {
-                        entries.add(com.github.mikephil.charting.data.Entry(i.toFloat(), closeVal.toFloat()))
+                        entries.add(Entry(i.toFloat(), closeVal.toFloat()))
                     }
                 }
                 chartData = entries
@@ -217,98 +292,117 @@ fun StockChartSection(holding: com.shaun.stocktracker.network.model.Holding) {
                 chartError = "No chart data available"
             }
         } catch (e: Exception) {
-            chartError = "Failed to load chart: ${e.message}"
+            chartError = "Failed to load chart"
         } finally {
             isLoadingChart = false
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Price Chart",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // Time range buttons
-        val ranges = listOf("1H", "3H", "1D", "1W", "1M", "3M", "1Y")
-        ScrollableTabRow(
-            selectedTabIndex = ranges.indexOf(selectedRange).takeIf { it >= 0 } ?: 2,
-            edgePadding = 0.dp,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            containerColor = Color.Transparent,
-            divider = {}
-        ) {
-            ranges.forEach { range ->
-                val selected = range == selectedRange
-                Tab(
-                    selected = selected,
-                    onClick = { selectedRange = range },
-                    text = { 
-                        Text(
-                            range, 
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        ) 
-                    }
-                )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .padding(top = 16.dp, bottom = 8.dp)
+    ) {
+        Column {
+            // Chart Area
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoadingChart) {
+                    CircularProgressIndicator(color = Color(0xFF0ECB81))
+                } else if (chartError != null) {
+                    Text(text = chartError ?: "Error", color = Color.Red)
+                } else if (chartData != null) {
+                    // Teal color like the screenshot
+                    val lineColor = android.graphics.Color.parseColor("#00B8D9") 
+                    
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { context ->
+                            LineChart(context).apply {
+                                description.isEnabled = false
+                                setTouchEnabled(true)
+                                isDragEnabled = true
+                                setScaleEnabled(true)
+                                setPinchZoom(false)
+                                
+                                xAxis.apply {
+                                    isEnabled = false
+                                }
+                                
+                                axisLeft.apply {
+                                    isEnabled = false
+                                }
+                                
+                                axisRight.isEnabled = false
+                                legend.isEnabled = false
+                                setDrawGridBackground(false)
+                                setDrawBorders(false)
+                                setViewPortOffsets(0f, 0f, 0f, 0f)
+                            }
+                        },
+                        update = { chart ->
+                            val dataSet = LineDataSet(chartData, "Price").apply {
+                                color = lineColor
+                                setDrawCircles(false)
+                                setDrawValues(false)
+                                lineWidth = 1.5f
+                                mode = LineDataSet.Mode.CUBIC_BEZIER
+                                setDrawFilled(true)
+                                fillColor = lineColor
+                                fillAlpha = 20
+                                setDrawHorizontalHighlightIndicator(false)
+                                setDrawVerticalHighlightIndicator(true)
+                                highLightColor = android.graphics.Color.parseColor("#94A3B8")
+                            }
+                            chart.data = LineData(dataSet)
+                            chart.invalidate()
+                        }
+                    )
+                }
             }
-        }
 
-        // Chart Area
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(250.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isLoadingChart) {
-                CircularProgressIndicator()
-            } else if (chartError != null) {
-                Text(text = chartError ?: "Error", color = MaterialTheme.colorScheme.error)
-            } else if (chartData != null) {
-                val lineColor = if (holding.ltp >= holding.avgPrice) android.graphics.Color.parseColor("#2E7D32") else android.graphics.Color.parseColor("#C62828")
-                androidx.compose.ui.viewinterop.AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { context ->
-                        com.github.mikephil.charting.charts.LineChart(context).apply {
-                            description.isEnabled = false
-                            setTouchEnabled(true)
-                            isDragEnabled = true
-                            setScaleEnabled(true)
-                            setPinchZoom(true)
-                            
-                            xAxis.apply {
-                                position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
-                                setDrawGridLines(false)
-                                setDrawLabels(false)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Custom Tabs
+            val ranges = listOf("1D", "1W", "1M", "1Y", "3Y")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                ranges.forEach { range ->
+                    val selected = range == selectedRange
+                    Box(
+                        modifier = Modifier
+                            .clickable { selectedRange = range }
+                            .padding(vertical = 8.dp, horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = range,
+                                color = if (selected) Color(0xFF4C6FFF) else textSecondary,
+                                fontSize = 14.sp,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                            if (selected) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .height(2.dp)
+                                        .width(20.dp)
+                                        .background(Color(0xFF4C6FFF), RoundedCornerShape(1.dp))
+                                )
                             }
-                            
-                            axisLeft.apply {
-                                setDrawGridLines(true)
-                                textColor = android.graphics.Color.GRAY
-                            }
-                            
-                            axisRight.isEnabled = false
-                            legend.isEnabled = false
                         }
-                    },
-                    update = { chart ->
-                        val dataSet = com.github.mikephil.charting.data.LineDataSet(chartData, "Price").apply {
-                            color = lineColor
-                            setDrawCircles(false)
-                            setDrawValues(false)
-                            lineWidth = 2f
-                            mode = com.github.mikephil.charting.data.LineDataSet.Mode.CUBIC_BEZIER
-                            setDrawFilled(true)
-                            fillColor = lineColor
-                            fillAlpha = 50
-                        }
-                        chart.data = com.github.mikephil.charting.data.LineData(dataSet)
-                        chart.invalidate()
                     }
-                )
+                }
             }
         }
     }

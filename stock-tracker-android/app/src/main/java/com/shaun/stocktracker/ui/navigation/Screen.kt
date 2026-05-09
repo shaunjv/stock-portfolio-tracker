@@ -17,4 +17,10 @@ sealed class Screen(val route: String) {
         /** Nav argument key. */
         const val ARG_SYMBOL = "symbol"
     }
+
+    /** Full screen chart */
+    object FullChart : Screen("full_chart/{symbol}") {
+        fun createRoute(symbol: String): String = "full_chart/$symbol"
+        const val ARG_SYMBOL = "symbol"
+    }
 }

@@ -68,6 +68,27 @@ fun AppNavGraph(
             StockDetailScreen(
                 holding = holding,
                 viewModel = detailViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToFullChart = { sym ->
+                    navController.navigate(Screen.FullChart.createRoute(sym))
+                }
+            )
+        }
+
+        // ── Full Chart ───────────────────────────────────────
+        composable(
+            route = Screen.FullChart.route,
+            arguments = listOf(
+                navArgument(Screen.FullChart.ARG_SYMBOL) {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val symbol = backStackEntry.arguments?.getString(Screen.FullChart.ARG_SYMBOL) ?: ""
+            val holding = dashboardViewModel.getHoldingBySymbol(symbol)
+            com.shaun.stocktracker.ui.detail.FullChartScreen(
+                symbol = symbol,
+                currentPrice = holding?.ltp,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

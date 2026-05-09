@@ -35,6 +35,7 @@
         android:extractNativeLibs="false"
         android:label="Stock Portfolio Tracker"
         android:supportsRtl="true"
+        android:testOnly="true"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar" >
         <activity
             android:name="com.shaun.stocktracker.MainActivity"
