@@ -1,0 +1,23 @@
+R_DEF: Internal format may change without notice
+local
+drawable bg_badge_green
+drawable bg_badge_red
+id btn_alert_delete
+id btn_alert_edit
+id btn_alert_toggle
+id chip_group_filters
+id dropdown_alert_type
+id et_alert_price
+id et_alert_symbol
+id fab_create_alert
+id progress_alerts
+id rv_alerts
+id tv_alert_created
+id tv_alert_price
+id tv_alert_status
+id tv_alert_symbol
+id tv_alert_type
+id tv_empty_state
+layout dialog_create_alert
+layout fragment_alerts
+layout item_alert

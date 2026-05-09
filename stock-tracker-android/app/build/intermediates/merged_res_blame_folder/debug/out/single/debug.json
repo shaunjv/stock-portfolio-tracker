@@ -1,0 +1,30 @@
+[
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-merged_res-74:\\layout_dialog_create_alert.xml.flat",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\layout\\dialog_create_alert.xml"
+    },
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-merged_res-74:\\drawable_bg_badge_red.xml.flat",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\drawable\\bg_badge_red.xml"
+    },
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-merged_res-74:\\layout_item_alert.xml.flat",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\layout\\item_alert.xml"
+    },
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-merged_res-74:\\drawable_bg_badge_green.xml.flat",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\drawable\\bg_badge_green.xml"
+    },
+    {
+        "merged": "com.shaun.stocktracker.app-merged_res-74:/layout_item_alert.xml.flat",
+        "source": "com.shaun.stocktracker.app-main-76:/layout/item_alert.xml"
+    },
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-merged_res-74:\\layout_fragment_alerts.xml.flat",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\layout\\fragment_alerts.xml"
+    },
+    {
+        "merged": "com.shaun.stocktracker.app-merged_res-74:/layout_fragment_alerts.xml.flat",
+        "source": "com.shaun.stocktracker.app-main-76:/layout/fragment_alerts.xml"
+    }
+]

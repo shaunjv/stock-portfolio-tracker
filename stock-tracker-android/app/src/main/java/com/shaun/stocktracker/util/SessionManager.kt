@@ -18,7 +18,7 @@ class SessionManager(context: Context) {
         private const val KEY_LAST_LOGIN_TIME = "last_login_time"
 
         // Default: Android emulator localhost. Change for physical device.
-        private const val DEFAULT_BASE_URL = "http://10.0.2.2:8000"
+        private const val DEFAULT_BASE_URL = "https://stock-portfolio-tracker-production-8b3d.up.railway.app"
     }
 
     private val prefs: SharedPreferences

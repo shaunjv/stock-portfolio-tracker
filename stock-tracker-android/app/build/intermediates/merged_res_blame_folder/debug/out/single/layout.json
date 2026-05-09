@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-mergeDebugResources-73:\\layout\\fragment_alerts.xml",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\layout\\fragment_alerts.xml"
+    },
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-mergeDebugResources-73:\\layout\\dialog_create_alert.xml",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\layout\\dialog_create_alert.xml"
+    },
+    {
+        "merged": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-mergeDebugResources-73:\\layout\\item_alert.xml",
+        "source": "C:\\Users\\Jeni\\.gradle\\daemon\\8.6\\com.shaun.stocktracker.app-main-76:\\layout\\item_alert.xml"
+    },
+    {
+        "merged": "com.shaun.stocktracker.app-mergeDebugResources-73:/layout/item_alert.xml",
+        "source": "com.shaun.stocktracker.app-main-76:/layout/item_alert.xml"
+    },
+    {
+        "merged": "com.shaun.stocktracker.app-mergeDebugResources-73:/layout/fragment_alerts.xml",
+        "source": "com.shaun.stocktracker.app-main-76:/layout/fragment_alerts.xml"
+    }
+]

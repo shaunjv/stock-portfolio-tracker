@@ -8,7 +8,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.filled.MoveToInbox
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,19 +54,19 @@ fun DashboardScreen(
                     // Dark Mode Toggle
                     IconButton(onClick = onToggleTheme) {
                         Icon(
-                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                             contentDescription = "Toggle Theme"
                         )
                     }
 
                     // Refresh Button
                     IconButton(onClick = { viewModel.fetchHoldings() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
 
                     // Sort Dropdown
                     IconButton(onClick = { sortMenuExpanded = true }) {
-                        Icon(Icons.Default.Sort, contentDescription = "Sort")
+                        Icon(Icons.Filled.Sort, contentDescription = "Sort")
                     }
                     DropdownMenu(
                         expanded = sortMenuExpanded,
@@ -118,7 +124,7 @@ fun DashboardScreen(
                         .fillMaxWidth()
                         .padding(16.dp),
                     placeholder = { Text("Search stocks...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -255,7 +261,7 @@ fun ErrorState(message: String, buttonText: String, onAction: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.ErrorOutline,
+            imageVector = Icons.Outlined.ErrorOutline,
             contentDescription = "Error",
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier.size(64.dp)
@@ -284,7 +290,7 @@ fun EmptyState(searchQuery: String) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Inbox,
+            imageVector = Icons.Filled.MoveToInbox,
             contentDescription = "Empty",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(64.dp)
@@ -301,5 +307,73 @@ fun EmptyState(searchQuery: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TEMPORARY MOCK PREVIEW - Remove or ignore this for production
+// ---------------------------------------------------------------------------
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun DashboardScreenPreview() {
+    val mockHoldings = listOf(
+        Holding("RELIANCE", "NSE", 10, 2500.0, 2900.0, 4000.0, 16.0),
+        Holding("TCS", "NSE", 5, 3200.0, 3100.0, -500.0, -3.12)
+    )
+
+    MaterialTheme {
+        // We mock the state here directly instead of using the ViewModel
+        var sortMenuExpanded by remember { mutableStateOf(false) }
+
+        Scaffold(
+            topBar = {
+                @OptIn(ExperimentalMaterial3Api::class)
+                TopAppBar(
+                    title = { Text("Portfolio") },
+                    actions = {
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(Color.Green)
+                        )
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Filled.DarkMode, contentDescription = "Toggle Theme")
+                        }
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                        }
+                        IconButton(onClick = { sortMenuExpanded = true }) {
+                            Icon(Icons.Filled.Sort, contentDescription = "Sort")
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                OutlinedTextField(
+                    value = "",
+                    onValueChange = {},
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    placeholder = { Text("Search stocks...") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                PortfolioSummaryCard(totalValue = 44500.0, totalPnl = 3500.0)
+
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+                    items(mockHoldings) { holding ->
+                        StockItemRow(holding = holding, onClick = {})
+                    }
+                }
+            }
+        }
     }
 }

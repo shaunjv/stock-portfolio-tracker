@@ -36,7 +36,10 @@ class AlertsFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_alerts, container, false)
+        // Force the Material3 theme to prevent crashes when inflating Material components from Compose
+        val themedContext = android.view.ContextThemeWrapper(requireContext(), com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar)
+        val themedInflater = inflater.cloneInContext(themedContext)
+        return themedInflater.inflate(R.layout.fragment_alerts, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

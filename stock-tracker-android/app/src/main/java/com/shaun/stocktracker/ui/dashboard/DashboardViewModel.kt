@@ -113,6 +113,11 @@ class DashboardViewModel(
         applyFiltersAndSort()
     }
 
+    fun getHoldingBySymbol(symbol: String): Holding? {
+        // Find holding in the full cached list (ignoring search filters)
+        return _state.value.holdings.find { it.symbol == symbol }
+    }
+
     private fun applyFiltersAndSort() {
         val currentState = _state.value
         var filtered = currentState.holdings
